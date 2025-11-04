@@ -27,6 +27,7 @@ private:
   static int compareAbs(const int2048 &a, const int2048 &b);
   static int2048 addAbs(const int2048 &a, const int2048 &b);
   static int2048 subAbs(const int2048 &a, const int2048 &b);
+  static int2048 multiplyAbs(const int2048 &a, const int2048 &b);
 
 public:
   // Constructors

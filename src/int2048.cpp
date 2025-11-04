@@ -213,23 +213,94 @@ int2048 &int2048::operator*=(const int2048 &other) {
   return *this;
 }
 
-int2048 operator*(int2048 a, const int2048 &b) {
-  int2048 result;
-  result.digits.assign(a.digits.size() + b.digits.size(), 0);
+// Helper for Karatsuba multiplication
+int2048 int2048::multiplyAbs(const int2048 &a, const int2048 &b) {
+  const size_t KARATSUBA_THRESHOLD = 50;
   
-  for (size_t i = 0; i < a.digits.size(); i++) {
-    long long carry = 0;
-    for (size_t j = 0; j < b.digits.size() || carry; j++) {
-      long long cur = result.digits[i + j] + carry;
-      if (j < b.digits.size()) {
-        cur += (long long)a.digits[i] * b.digits[j];
+  if (a.digits.size() <= KARATSUBA_THRESHOLD || b.digits.size() <= KARATSUBA_THRESHOLD) {
+    // Use standard multiplication for small numbers
+    int2048 result;
+    result.digits.assign(a.digits.size() + b.digits.size(), 0);
+    
+    for (size_t i = 0; i < a.digits.size(); i++) {
+      long long carry = 0;
+      for (size_t j = 0; j < b.digits.size() || carry; j++) {
+        long long cur = result.digits[i + j] + carry;
+        if (j < b.digits.size()) {
+          cur += (long long)a.digits[i] * b.digits[j];
+        }
+        result.digits[i + j] = cur % BASE;
+        carry = cur / BASE;
       }
-      result.digits[i + j] = cur % BASE;
-      carry = cur / BASE;
     }
+    
+    result.normalize();
+    result.sign = false;
+    return result;
+  }
+  
+  // Karatsuba algorithm
+  size_t mid = std::max(a.digits.size(), b.digits.size()) / 2;
+  
+  int2048 a0, a1, b0, b1;
+  a0.digits.assign(a.digits.begin(), a.digits.begin() + std::min(mid, a.digits.size()));
+  if (mid < a.digits.size()) {
+    a1.digits.assign(a.digits.begin() + mid, a.digits.end());
+  } else {
+    a1.digits.push_back(0);
+  }
+  
+  b0.digits.assign(b.digits.begin(), b.digits.begin() + std::min(mid, b.digits.size()));
+  if (mid < b.digits.size()) {
+    b1.digits.assign(b.digits.begin() + mid, b.digits.end());
+  } else {
+    b1.digits.push_back(0);
+  }
+  
+  a0.sign = false;
+  a1.sign = false;
+  b0.sign = false;
+  b1.sign = false;
+  a0.normalize();
+  a1.normalize();
+  b0.normalize();
+  b1.normalize();
+  
+  int2048 z0 = multiplyAbs(a0, b0);
+  int2048 z2 = multiplyAbs(a1, b1);
+  
+  int2048 a0_plus_a1 = int2048::addAbs(a0, a1);
+  int2048 b0_plus_b1 = int2048::addAbs(b0, b1);
+  int2048 z1 = multiplyAbs(a0_plus_a1, b0_plus_b1);
+  z1 = int2048::subAbs(z1, z0);
+  z1 = int2048::subAbs(z1, z2);
+  
+  // result = z0 + z1 * BASE^mid + z2 * BASE^(2*mid)
+  int2048 result = z0;
+  
+  // Add z1 * BASE^mid
+  if (z1.digits.size() > 1 || z1.digits[0] != 0) {
+    for (size_t i = 0; i < mid; i++) {
+      z1.digits.insert(z1.digits.begin(), 0);
+    }
+    result = int2048::addAbs(result, z1);
+  }
+  
+  // Add z2 * BASE^(2*mid)
+  if (z2.digits.size() > 1 || z2.digits[0] != 0) {
+    for (size_t i = 0; i < 2 * mid; i++) {
+      z2.digits.insert(z2.digits.begin(), 0);
+    }
+    result = int2048::addAbs(result, z2);
   }
   
   result.normalize();
+  result.sign = false;
+  return result;
+}
+
+int2048 operator*(int2048 a, const int2048 &b) {
+  int2048 result = int2048::multiplyAbs(a, b);
   result.sign = (a.sign != b.sign);
   if (result.digits.size() == 1 && result.digits[0] == 0) {
     result.sign = false;
