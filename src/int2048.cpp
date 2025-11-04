@@ -270,13 +270,16 @@ int2048 operator/(int2048 a, const int2048 &b) {
     int left = 0, right = BASE - 1;
     while (left < right) {
       int mid = (left + right + 1) / 2;
-      int2048 temp = b_abs;
-      long long mult = (long long)temp.digits[0] * mid;
-      temp.digits[0] = mult % BASE;
-      long long carry = mult / BASE;
-      for (size_t j = 1; j < temp.digits.size() || carry; j++) {
+      // Multiply b_abs by mid
+      int2048 temp;
+      temp.digits.assign(b_abs.digits.size(), 0);
+      long long carry = 0;
+      for (size_t j = 0; j < b_abs.digits.size() || carry; j++) {
+        long long cur = carry;
+        if (j < b_abs.digits.size()) {
+          cur += (long long)b_abs.digits[j] * mid;
+        }
         if (j >= temp.digits.size()) temp.digits.push_back(0);
-        long long cur = temp.digits[j] + carry;
         temp.digits[j] = cur % BASE;
         carry = cur / BASE;
       }
@@ -291,13 +294,16 @@ int2048 operator/(int2048 a, const int2048 &b) {
     
     result.digits[i] = left;
     
-    int2048 temp = b_abs;
-    long long mult = (long long)temp.digits[0] * left;
-    temp.digits[0] = mult % BASE;
-    long long carry = mult / BASE;
-    for (size_t j = 1; j < temp.digits.size() || carry; j++) {
+    // Multiply b_abs by left
+    int2048 temp;
+    temp.digits.assign(b_abs.digits.size(), 0);
+    long long carry = 0;
+    for (size_t j = 0; j < b_abs.digits.size() || carry; j++) {
+      long long cur = carry;
+      if (j < b_abs.digits.size()) {
+        cur += (long long)b_abs.digits[j] * left;
+      }
       if (j >= temp.digits.size()) temp.digits.push_back(0);
-      long long cur = temp.digits[j] + carry;
       temp.digits[j] = cur % BASE;
       carry = cur / BASE;
     }
